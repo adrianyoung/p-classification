@@ -564,17 +564,6 @@ def distance_entitys(poss, pos_map):
 
     return np.array(pos2entity)
 
-def Process(data_list, mode='train'):
-    text = deal_with_text(data_list, mode)
-    postag = deal_with_postag(data_list, mode)
-    spo_list = deal_with_spo(data_list, mode)
-    raw_list = list(zip(text, postag))
-    data_list = []
-    for spos, raw in zip(spo_list, raw_list):
-        for spo in spos:
-            data_list.append([raw[0], raw[1], spo])
-    return data_list
-
 def lexical2id(ids, poss, pad_id, hps):
 
     length = len(ids)
@@ -620,6 +609,7 @@ def Batch(data_list,char_vocab,word_vocab,schemas_vocab,pos_map,postag_vocab,hps
         lexical.append(lex)
         postag_sentence.append(postag)
 
+        # if ((cnt+1) % hps.batch_size == 0) or (cnt == len(data_list)-1):
         if (cnt+1) % hps.batch_size == 0:
 
             data_dict={}
@@ -671,6 +661,17 @@ def Example(text, postag, label, objs, poss, schemas_vocab, char_vocab, word_voc
     postag_sentence = np.pad(postag_sentence, (0, hps.sequence_length-len(postag_sentence)), 'constant')
 
     return label_sentence, char_sentence, mix_sentence, objects_ids, relative_position, entitys_position, [lchar1, lchar2, lmix1, lmix2], postag_sentence
+
+def Process(data_list, mode='train'):
+    text = deal_with_text(data_list, mode)
+    postag = deal_with_postag(data_list, mode)
+    spo_list = deal_with_spo(data_list, mode)
+    raw_list = list(zip(text, postag))
+    data_list = []
+    for spos, raw in zip(spo_list, raw_list):
+        for spo in spos:
+            data_list.append([raw[0], raw[1], spo])
+    return data_list
 
 def full_data():
 

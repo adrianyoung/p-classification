@@ -4,7 +4,7 @@ import numpy as py
 
 class CNN:
     def __init__(self,is_training,num_classes,vocab_size,batch_size,embed_size,embed_size_p,learning_rate,decay_step,decay_rate,entity_window,sequence_length,filter_sizes,
-                 feature_map,use_highway_flag,highway_layers,sentence_size,use_ranking_loss,lm,margin_plus,margin_minus,clip_gradients=5.0):
+                 feature_map,use_highway_flag,highway_layers,sentence_size,use_ranking_loss,lm,margin_plus,margin_minus,first_decay_steps,t_mul,m_mul,alpha,clip_gradients=5.0):
         """init all hyperparameter"""
         self.initializer = tf.contrib.layers.variance_scaling_initializer()
 
@@ -25,6 +25,10 @@ class CNN:
         self.learning_rate = tf.Variable(learning_rate, trainable=False, name='learning_rate')
         self.decay_step = decay_step
         self.decay_rate = decay_rate
+        self.first_decay_steps = first_decay_steps
+        self.t_mul = t_mul
+        self.m_mul = m_mul
+        self.alpha = alpha
 
         """Overfit"""
         self.dropout_keep_prob = tf.placeholder(tf.float32, name='dropout_keep_prob')
@@ -85,6 +89,7 @@ class CNN:
             self.loss_val = self.loss_softmax()
 
         self.learning_rate = tf.train.exponential_decay(self.learning_rate, self.global_step, self.decay_step, self.decay_rate, staircase=True)
+        # self.learning_rate = tf.train.cosine_decay_restarts(self.learning_rate, self.global_step,self.first_decay_steps,self.t_mul,self.m_mul,self.alpha)
         self.train_op = self.train()
         self.train_op_frozen = self.train_frozen()
         self.merge = tf.summary.merge_all()
@@ -146,7 +151,7 @@ class CNN:
             with tf.name_scope("convolution-pooling-{0}".format(filter_size)):
                 filter = tf.get_variable("filter-{0}".format(filter_size), [filter_size, self.embed_size+5*self.embed_size_p, 1, self.feature_map[i]], initializer=self.initializer)
                 conv = tf.nn.conv2d(embedded_all_expanded, filter, strides=[1,1,1,1], padding="VALID", name="conv")
-                conv = tf.contrib.layers.batch_norm(conv, is_training=self.tst)
+                # conv = tf.contrib.layers.batch_norm(conv, is_training=self.tst)
                 b = tf.get_variable("b-{0}".format(filter_size), [self.feature_map[i]])
                 h = tf.nn.relu(tf.nn.bias_add(conv,b),"relu")
                 pooled = tf.nn.max_pool(h, ksize=[1,self.sequence_length-filter_size+1,1,1],strides=[1,1,1,1], padding='VALID',name="pool")
@@ -213,8 +218,11 @@ class CNN:
     def loss_ranking(self, l2_lambda=0.00001):
         with tf.name_scope("loss_ranking"):
             loss = self.ranking_loss()
+            tf.summary.scalar('ranking_loss', loss)
             l2_losses = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables() if 'bias' not in v.name]) * l2_lambda
+            tf.summary.scalar('l2_loss', l2_losses)
             loss = loss + l2_losses
+            tf.summary.scalar('total_loss', loss)
         return loss
 
     def ranking_loss(self):
@@ -233,7 +241,6 @@ class CNN:
             #judge NA class
             zeros = tf.zeros_like(labels[i,:], dtype=labels.dtype)
             conditon = tf.equal(tf.reduce_sum(labels[i,:]), tf.reduce_sum(zeros))
-            # tf.scalar_mul(labels[i,:], zeros)
             is_NA = tf.cond(conditon, lambda:tf.constant(0.0, dtype=tf.float32), lambda:tf.constant(1.0, dtype=tf.float32))
             # cplus = labels[i] #positive class label index
             _, cplus_indices = tf.nn.top_k(labels[i,:], k=1) #positive class label index
@@ -256,7 +263,7 @@ class CNN:
         with tf.name_scope("train_op_frozen"):
             learning_rate = self.learning_rate
             optimizer = tf.train.AdamOptimizer(learning_rate,beta1=0.99)
-            tvars = [tvar for tvar in tf.trainable_variables() if 'embedding' not in tvar.name]
+            tvars = [tvar for tvar in tf.trainable_variables() if ('Embedding_c' not in tvar.name) and ('Embedding_w' not in tvar.name)]
             gradients, variables = zip(*optimizer.compute_gradients(self.loss_val, tvars))
             gradients, _ = tf.clip_by_global_norm(gradients, self.clip_gradients)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)

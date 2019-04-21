@@ -7,6 +7,7 @@ import configparser
 path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir))
 program_config_path = os.path.join(path, 'conf/settings.ini')
+program_config_path = os.path.join(path, 'conf/settings_docker.ini')
 
 # logging message
 logging.basicConfig(level = logging.INFO,format ='[%(asctime)s : %(levelname)s/%(processName)s] %(message)s')
