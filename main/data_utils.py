@@ -150,14 +150,21 @@ def deal_with_spo(data_list, mode='full'):
                 func = lambda x,y: list(re.search(re.escape(x.lower()), y.lower()).span())
 
                 # true classes
+                cnt = 0
                 for spo in line['spo_list']:
-                    pairs.append([
-                    spo['predicate'],
-                    [spo['object_type'], spo['subject_type']],
-                    func(spo['object'], line['text']) + func(spo['subject'], line['text']),
-                    ])
-                    #list(re.search(re.escape(spo['object'].lower()), line['text'].lower()).span())
-                    #    + list(re.search(re.escape(spo['subject'].lower()), line['text'].lower()).span()),
+                    if (cnt % 2) == 0:
+                        pairs.append([
+                        spo['predicate'],
+                        [spo['object_type'], spo['subject_type']],
+                        func(spo['object'], line['text']) + func(spo['subject'], line['text']),
+                        ])
+                    else:
+                        pairs.append([
+                        spo['predicate'],
+                        [spo['subject_type'], spo['object_type']],
+                        func(spo['subject'], line['text']) + func(spo['object'], line['text']),
+                        ])
+                    cnt += 1
 
                 # NA classes
                 data = {}
@@ -614,9 +621,9 @@ def Batch(data_list,char_vocab,word_vocab,schemas_vocab,pos_map,postag_vocab,hps
 
             data_dict={}
             data_dict['label_sentence'] = np.array(label_sentence)
-            data_dict['char_sentence'] = char_sentence
+            data_dict['char_sentence'] = np.array(char_sentence)
             data_dict['postag_sentence'] = postag_sentence
-            data_dict['mix_sentence'] = mix_sentence
+            data_dict['mix_sentence'] = np.array(mix_sentence)
             data_dict['objects_ids'] = objects_ids
             data_dict['relative_position'] = relative_position
             data_dict['entitys_position'] = np.array(entitys_position)
