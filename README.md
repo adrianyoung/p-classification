@@ -7,6 +7,8 @@
 |Type of Task|Model|Precision|Recall|F1_score(marco)|  
 |:--:|:---|:----:|:--:|:-----:|
 |p-classification|CNN_5fold-cv|||0.8962|
+|p-classification|Capsule_5fold-cv||||
+|p-classification|BiGRU_5fold-cv|||0.8963|
 |p-classification|BiLSTM_5fold-cv||||
 |sequence-labeling|BiLSTM+CRF||||
 |Total|Ensemble||||
@@ -19,6 +21,7 @@
 - [x] 字向量使用 **sgns (negative sampling)**
 - [x] 词向量使用 **topic word embedding** 和 **glove**
 - [x] 字词向量融合使用 **add** 形式
+- [x] 使用 **3-grams concat (RNN)** 输入 
 - [x] 对 **NA** 做特殊处理, 包括使用 **grid search** 阈值判断
 - [x] **不采用** softmax cross-entropy 作为损失函数
 
