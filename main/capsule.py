@@ -117,7 +117,7 @@ class Capsule:
             self.Embedding_t = tf.get_variable("Embedding_t",shape=[self.vocab_size_t, self.embed_size_p],initializer=self.initializer)
 
         with tf.name_scope("MLP"):
-            self.W_projection = tf.get_variable("W_projection",shape=[self.embed_size*4 + self.embed_size_p*8 + self.sentence_size, self.num_classes], initializer=self.initializer)
+            self.W_projection = tf.get_variable("W_projection",shape=[self.embed_size*4 + self.embed_size_p*8 + self.sentence_size*4, self.num_classes], initializer=self.initializer)
             self.b_projection = tf.get_variable("b_projection",shape=[self.num_classes], initializer=self.initializer)
 
     def lexical_features(self):
@@ -184,18 +184,24 @@ class Capsule:
             with tf.variable_scope('capsule-{0}'.format(filter_size)):
                 filter = tf.get_variable("filter-{0}-capsule".format(filter_size), [filter_size, self.embed_size+5*self.embed_size_p, 1, self.feature_map[i]], initializer=self.initializer)
                 conv = tf.nn.conv2d(embedded_all_expanded, filter, strides=[1,2,1,1], padding="VALID", name="conv1")
-                conv = tf.contrib.layers.batch_norm(conv, is_training=self.tst)
+                # conv = tf.contrib.layers.batch_norm(conv, is_training=self.tst)
                 b = tf.get_variable("b-capsule", [self.feature_map[i]])
                 h = tf.nn.relu(tf.nn.bias_add(conv,b),"relu")
-                nets = self.capsules_init(h, shape=[1, 1, 32, 8], strides=[1, 1, 1, 1], padding='VALID', pose_shape=8, add_bias=True, name='primary')
-                nets = self.capsule_conv_layer(nets, shape=[3, 1, 8, 8], strides=[1, 1, 1, 1], iterations=3, name='conv2')
+                #nets = _conv2d_wrapper(
+                #    X, shape=[ngram, 300, 1, 32], strides=[1, 2, 1, 1], padding='VALID',
+                #    add_bias=True, activation_fn=tf.nn.relu, name='conv1'
+                #)
+                #tf.logging.info('output shape: {}'.format(nets.get_shape()))
+                nets = self.capsules_init(h, shape=[1, 1, 64, 4], strides=[1, 1, 1, 1], padding='VALID', pose_shape=4, add_bias=True, name='primary')
+                nets = self.capsule_conv_layer(nets, shape=[3, 1, 4, 4], strides=[1, 1, 1, 1], iterations=3, name='conv2')
                 nets = self.capsule_flatten(nets)
                 poses, activations = self.capsule_fc_layer(nets, self.sentence_size, 3, 'fc2')
                 poses_list.append(poses)
 
         poses = tf.reduce_mean(tf.convert_to_tensor(poses_list), axis=0)
         activations = K.sqrt(K.sum(K.square(poses), 2))
-        return poses, activations
+        logits = tf.reshape(poses, [-1, 4*self.sentence_size])
+        return poses, activations, logits
 
     def embedding(self):
         self.embedded_char = tf.nn.embedding_lookup(self.Embedding_c, self.input_x_c)
@@ -245,6 +251,9 @@ class Capsule:
     def vec_transformationByConv(self, poses, input_capsule_dim, input_capsule_num, output_capsule_dim, output_capsule_num):
 
         self.transformationByConv = tf.get_variable("transformation_conv_capsule",shape=[1, input_capsule_dim, output_capsule_dim*output_capsule_num], initializer=self.initializer_capsule)
+        #kernel = _get_weights_wrapper(
+        #name='weights', shape=[1, input_capsule_dim, output_capsule_dim*output_capsule_num], weights_decay_factor=0.0
+        #)
         tf.logging.info('poses: {}'.format(poses.get_shape()))
         tf.logging.info('kernel: {}'.format(self.transformationByConv.get_shape()))
         u_hat_vecs = keras.backend.conv1d(poses, self.transformationByConv)
@@ -255,29 +264,56 @@ class Capsule:
     def vec_transformationByMat(self, poses, input_capsule_dim, input_capsule_num, output_capsule_dim, output_capsule_num, shared=True):
         inputs_poses_shape = poses.get_shape().as_list()
         poses = poses[..., tf.newaxis, :]
-        poses = tf.tile(poses, [1, 1, output_capsule_num, 1])
+        poses = tf.tile(
+                poses, [1, 1, output_capsule_num, 1]
+                )
         if shared:
+
             self.transformationByMat = tf.get_variable("transformation_mat_capsule",shape=[1, 1, output_capsule_num, output_capsule_dim, input_capsule_dim], initializer=self.initializer_capsule)
-            kernel = tf.tile(self.transformationByMat, [inputs_poses_shape[0], input_capsule_num, 1, 1, 1])
+            #kernel = _get_weights_wrapper(
+            #name='weights', shape=[1, 1, output_capsule_num, output_capsule_dim, input_capsule_dim], weights_decay_factor=0.0
+            #)
+            kernel = tf.tile(
+                    self.transformationByMat, [inputs_poses_shape[0], input_capsule_num, 1, 1, 1]
+                    )
         else:
             self.transformationByMat = tf.get_variable("transformation_mat_capsule",shape=[1, input_capsule_num, output_capsule_num, output_capsule_dim, input_capsule_dim], initializer=self.initializer_capsule)
-            kernel = tf.tile(self.transformationByMat, [inputs_poses_shape[0], 1, 1, 1, 1])
+            #kernel = _get_weights_wrapper(
+            #name='weights', shape=[1, input_capsule_num, output_capsule_num, output_capsule_dim, input_capsule_dim], weights_decay_factor=0.0
+            #)
+            kernel = tf.tile(
+                    self.transformationByMat, [inputs_poses_shape[0], 1, 1, 1, 1]
+                    )
         tf.logging.info('poses: {}'.format(poses[...,tf.newaxis].get_shape()))
         tf.logging.info('kernel: {}'.format(kernel.get_shape()))
         u_hat_vecs = tf.squeeze(tf.matmul(kernel, poses[...,tf.newaxis]),axis=-1)
         u_hat_vecs = keras.backend.permute_dimensions(u_hat_vecs, (0, 2, 1, 3))
         return u_hat_vecs
 
-    def capsules_init(self, inputs, shape, strides, padding, pose_shape, add_bias, name):
+    def capsules_init(self, inputs, shape, strides, padding, pose_shape, add_bias, name): # TODO
         with tf.variable_scope(name):
             filter_shape = shape[0:-1] + [shape[-1] * pose_shape]
             filter = tf.get_variable("filter-capsule", filter_shape, initializer=self.initializer_capsule)
             conv = tf.nn.conv2d(inputs, filter, strides=strides, padding=padding, name="conv2")
             b = tf.get_variable("b-capsule", [filter_shape[-1]])
             poses = tf.nn.bias_add(conv,b)
+
+            #poses = _conv2d_wrapper(
+            #inputs,
+            #shape=shape[0:-1] + [shape[-1] * pose_shape],
+            #strides=strides,
+            #padding=padding,
+            #add_bias=add_bias,
+            #activation_fn=None,
+            #name='pose_stacked'
+            #)
             poses_shape = poses.get_shape().as_list()
             poses = tf.reshape(poses, [-1, poses_shape[1], poses_shape[2], shape[-1], pose_shape])
+
             beta_a = tf.get_variable("beta_a_capsule",shape=[1, shape[-1]], initializer=self.initializer_capsule)
+            #beta_a = _get_weights_wrapper(
+            #                name='beta_a', shape=[1, shape[-1]]
+            #            )
             poses = self.squash_v1(poses, axis=-1)
             activations = K.sqrt(K.sum(K.square(poses), axis=-1)) + beta_a
             tf.logging.info("prim poses dimension:{}".format(poses.get_shape()))
@@ -288,10 +324,22 @@ class Capsule:
         with tf.variable_scope(name):
             poses, i_activations = nets
             input_pose_shape = poses.get_shape().as_list()
-            u_hat_vecs = self.vec_transformationByConv(poses,input_pose_shape[-1],input_pose_shape[1],input_pose_shape[-1],output_capsule_num,)
+
+            u_hat_vecs = self.vec_transformationByConv(
+                        poses,
+                        input_pose_shape[-1], input_pose_shape[1],
+                        input_pose_shape[-1], output_capsule_num,
+                        )
+
             tf.logging.info('votes shape: {}'.format(u_hat_vecs.get_shape()))
+
             beta_a = tf.get_variable("beta_a_capsule",shape=[1, output_capsule_num], initializer=self.initializer_capsule)
+            #beta_a = _get_weights_wrapper(
+            #        name='beta_a', shape=[1, output_capsule_num]
+            #        )
+
             poses, activations = self.routing(u_hat_vecs, beta_a, iterations, output_capsule_num, i_activations)
+
             tf.logging.info('capsule fc shape: {}'.format(poses.get_shape()))
 
         return poses, activations
@@ -332,7 +380,9 @@ class Capsule:
             tf.logging.info('i_poses_patches shape: {}'.format(inputs_poses_patches.get_shape()))
 
             inputs_poses_shape = inputs_poses_patches.get_shape().as_list()
-            inputs_poses_patches = tf.reshape(inputs_poses_patches, [-1, shape[0]*shape[1]*shape[2], inputs_poses_shape[-1]])
+            inputs_poses_patches = tf.reshape(inputs_poses_patches, [
+                                    -1, shape[0]*shape[1]*shape[2], inputs_poses_shape[-1]
+                                    ])
 
             i_activations_patches = tf.transpose(
             tf.gather(
@@ -354,6 +404,9 @@ class Capsule:
 
 
             beta_a = tf.get_variable("beta_a_capsule",shape=[1, shape[3]], initializer=self.initializer_capsule)
+            #beta_a = _get_weights_wrapper(
+            #        name='beta_a', shape=[1, shape[3]]
+            #        )
             poses, activations = self.routing(u_hat_vecs, beta_a, iterations, shape[3], i_activations_patches)
             poses = tf.reshape(poses, [
                         inputs_poses_shape[0], inputs_poses_shape[1],
@@ -387,10 +440,11 @@ class Capsule:
         # init embedding
         self.embedding()
         # get features
-        _, sentence = self.capsule_model_B()
+        _, _, sentence = self.capsule_model_B()
         lexical = self.lexical_features()
         # concat
         h = tf.concat([sentence, lexical], axis=1)
+        # h = tf.contrib.layers.batch_norm(h, scale=True, is_training=self.tst)
 
         # MLP
         with tf.name_scope("output"):

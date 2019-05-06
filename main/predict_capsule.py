@@ -31,12 +31,12 @@ tf.app.flags.DEFINE_string("word_embedding_model_path",get_config_values('vector
 tf.app.flags.DEFINE_boolean("is_training", False,"is traning.true:tranining,false:testing/inference")
 tf.app.flags.DEFINE_integer("embed_size", 300,"word embedding size")
 tf.app.flags.DEFINE_integer("embed_size_p", 10,"position embedding size")
-tf.app.flags.DEFINE_integer("sentence_size", 300,"the size of the sentence level embedding")
+tf.app.flags.DEFINE_integer("sentence_size", 64,"the size of the sentence level embedding")
 
 tf.app.flags.DEFINE_integer("batch_size", 1, "Batch size for training/evaluating.")
 tf.app.flags.DEFINE_float("learning_rate",0.001,"learning rate")
-tf.app.flags.DEFINE_integer("decay_step", 20000, "how many steps before decay learning rate.")
-tf.app.flags.DEFINE_float("decay_rate", 0.5, "Rate of decay for learning rate.")
+tf.app.flags.DEFINE_integer("decay_step", 25000, "how many steps before decay learning rate.")
+tf.app.flags.DEFINE_float("decay_rate", 0.45, "Rate of decay for learning rate.")
 
 tf.app.flags.DEFINE_integer("first_decay_steps", 2000, "how many steps before decay learning rate.")
 tf.app.flags.DEFINE_float("t_mul", 2.0, "Rate of decay for learning rate.")
@@ -57,13 +57,13 @@ tf.app.flags.DEFINE_boolean("use_dev", True,"using dev dataset.")
 tf.app.flags.DEFINE_boolean("use_test", False,"using test dataset.")
 
 tf.app.flags.DEFINE_integer("k_fold", 5, "K-fold Cross Vaildation")
-tf.app.flags.DEFINE_integer("num_epochs", 6,"number of epochs to run.")
+tf.app.flags.DEFINE_integer("num_epochs", 5,"number of epochs to run.")
 
 tf.app.flags.DEFINE_integer("vocab_size_c", 7533,"vocab size for char")
 tf.app.flags.DEFINE_integer("vocab_size_w", 422901,"vocab size for word")
 
-filter_sizes = [6,7,8,9]
-feature_map = [75,75,75,75]
+filter_sizes = [7,8,9]
+feature_map = [64,64,64]
 vocab_size = [7533,422901,600,28,18]
 
 def main(_):
@@ -113,7 +113,7 @@ def main(_):
             print ("Model %d\tConfusion matrix:" % (K))
             pprint (confusion_matrix)
 
-        logits += logits * 0.5
+        logits += logits * 0.6
         del Model
         gc.collect()
         tf.reset_default_graph()
@@ -139,7 +139,7 @@ def main(_):
             print ("Model %d\tConfusion matrix:" % (K))
             pprint (confusion_matrix)
 
-        logits += logits * 0.5
+        logits += logits * 0.4
         del Model
         gc.collect()
         tf.reset_default_graph()

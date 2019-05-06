@@ -16,6 +16,7 @@ from tqdm import tqdm
 #configuration
 FLAGS=tf.app.flags.FLAGS
 
+tf.app.flags.DEFINE_string("confusion_matrix_dir",get_config_values('model','capsule_confusion_matrix'),"path of confusion_matrix")
 tf.app.flags.DEFINE_string("ckpt_dir",get_config_values('model','capsule'),"checkpoint location for the model")
 tf.app.flags.DEFINE_string("log_path",get_config_values('model','log'),"path of summary log.")
 
@@ -30,12 +31,12 @@ tf.app.flags.DEFINE_string("word_embedding_model_path",get_config_values('vector
 tf.app.flags.DEFINE_boolean("is_training", True,"is traning.true:tranining,false:testing/inference")
 tf.app.flags.DEFINE_integer("embed_size", 300,"word embedding size")
 tf.app.flags.DEFINE_integer("embed_size_p", 10,"position embedding size")
-tf.app.flags.DEFINE_integer("sentence_size", 300,"the size of the sentence level embedding")
+tf.app.flags.DEFINE_integer("sentence_size", 64,"the size of the sentence level embedding")
 
 tf.app.flags.DEFINE_integer("batch_size", 32, "Batch size for training/evaluating.")
 tf.app.flags.DEFINE_float("learning_rate",0.001,"learning rate")
-tf.app.flags.DEFINE_integer("decay_step", 20000, "how many steps before decay learning rate.")
-tf.app.flags.DEFINE_float("decay_rate", 0.5, "Rate of decay for learning rate.")
+tf.app.flags.DEFINE_integer("decay_step", 25000, "how many steps before decay learning rate.")
+tf.app.flags.DEFINE_float("decay_rate", 0.45, "Rate of decay for learning rate.")
 
 tf.app.flags.DEFINE_integer("first_decay_steps", 2000, "how many steps before decay learning rate.")
 tf.app.flags.DEFINE_float("t_mul", 2.0, "Rate of decay for learning rate.")
@@ -52,7 +53,7 @@ tf.app.flags.DEFINE_float("lm", 2.0,"lambda in ranking loss")
 tf.app.flags.DEFINE_float("margin_plus", 2.5,"margin value for postive in ranking loss")
 tf.app.flags.DEFINE_float("margin_minus", 0.5,"margin value for negative in ranking loss")
 
-tf.app.flags.DEFINE_integer("k_fold", 6, "K-fold Cross Vaildation")
+tf.app.flags.DEFINE_integer("k_fold", 5, "K-fold Cross Vaildation")
 tf.app.flags.DEFINE_integer("num_epochs", 5,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1,"Validate every validate_every epochs.")
 
@@ -60,7 +61,7 @@ tf.app.flags.DEFINE_integer("vocab_size_c", 7533,"vocab size for char")
 tf.app.flags.DEFINE_integer("vocab_size_w", 422901,"vocab size for word")
 
 filter_sizes = [7,8,9]
-feature_map = [32,32,32]
+feature_map = [64,64,64]
 vocab_size = [7533,422901,600,28,18]
 loss_class = [[0,3],[1,8],[1,19],[1,24],[8,19],[8,24],[19,24],[12,18],[12,20],[12,47],[18,20],
               [18,47],[20,47],[13,25],[13,27],[25,27],[31,32],[31,44],[32,44],[29,46],[34,49],
