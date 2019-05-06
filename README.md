@@ -22,8 +22,9 @@
 - [x] 词向量使用 **topic word embedding** 和 **glove**
 - [x] 字词向量融合使用 **add** 形式
 - [x] 使用 **3-grams concat (RNN)** 输入 
+- [x] 直接 **capsules flatten** 替代 **capsules 模长概率** 计算
 - [x] 对 **NA** 做特殊处理, 包括使用 **grid search** 阈值判断
-- [x] **不采用** softmax cross-entropy 作为损失函数
+- [x] **不采用** softmax cross-entropy 作为损失函数 
 
 ## Structure  
 &emsp;&emsp;**Embedding部分**：  
