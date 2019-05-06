@@ -7,7 +7,7 @@
 |Type of Task|Model|Precision|Recall|F1_score(marco)|  
 |:--:|:---|:----:|:--:|:-----:|
 |p-classification|CNN_5fold-cv|||0.8962|
-|p-classification|Capsule_5fold-cv||||
+|p-classification|Capsule_5fold-cv|||0.8890|
 |p-classification|BiGRU_5fold-cv|||0.8963|
 |p-classification|BiLSTM_5fold-cv||||
 |sequence-labeling|BiLSTM+CRF||||
