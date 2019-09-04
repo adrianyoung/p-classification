@@ -1,4 +1,4 @@
-# p-classification
+# Relation-Classification （ Abandoned already ）
 
 ## Introduction
 &emsp;&emsp;本项目用于记录比赛单模，包括部分论文复现尝试。(半途终止)  
