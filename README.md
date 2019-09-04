@@ -1,7 +1,7 @@
 # p-classification
 
 ## Introduction
-&emsp;&emsp;本项目用于记录比赛，包括部分论文复现。  
+&emsp;&emsp;本项目用于记录比赛单模，包括部分论文复现尝试。(半途终止)  
 
 ## Performance
 |Type of Task|Model|Precision|Recall|F1_score(marco)|  
@@ -23,6 +23,7 @@
 - [x] 使用 **3-grams concat (RNN)** 输入 
 - [x] 直接 **capsules flatten** 替代 **capsules 模长概率** 计算
 - [x] 对 **NA** 做特殊处理, 包括使用 **grid search** 阈值判断
+- [x] 尝试 **ranking loss** 为损失函数
 
 ## Structure  
 &emsp;&emsp;**Embedding部分**：  
@@ -32,3 +33,9 @@
 
 &emsp;&emsp;**CNN部分**：  
 <img src="https://drive.google.com/uc?export=view&id=12z_QHLjA4zW2wScbTSxQiYHGNfUCDbz-" width = "420" height = "400" alt="sentence_model" align=center />  
+
+## Reference  
+- [*Relation Classification via Convolutional Deep Neural Network*](https://aclweb.org/anthology/C14-1220) 
+- [*Attention-Based Bidirectional Long Short-Term Memory Networks for Relation Classification*](https://www.aclweb.org/anthology/P16-2034)
+- [*Investigating Capsule Networks with Dynamic Routing for Text Classification*](https://arxiv.org/pdf/1804.00538.pdf)
+
